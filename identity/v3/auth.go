@@ -19,7 +19,7 @@ import (
 	"errors"
 	"time"
 
-	"git.openstack.org/openstack/golang-client.git/openstack"
+	"github.com/qiujian16/golang-client/openstack"
 )
 
 // AuthRef is the returned authentication object, maybe v2 or v3
