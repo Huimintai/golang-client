@@ -38,15 +38,15 @@ type Response struct {
 }
 
 // Generic callback to get a token from the auth plugin
-type AuthFunc func(s *Session, opts interface{}) (AuthRef, error)
+type AuthFunc func(s *Session, opts interface{}) (string, error)
 
 type Session struct {
 	httpClient *http.Client
-	AuthToken  AuthRef
+	AuthToken  string
 	Headers    http.Header
 }
 
-func NewSession(hclient *http.Client, auth AuthRef, tls *tls.Config) (session *Session, err error) {
+func NewSession(hclient *http.Client, auth string, tls *tls.Config) (session *Session, err error) {
 	if hclient == nil {
 		// Only build a transport if we're also building the client
 		tr := &http.Transport{
@@ -71,8 +71,8 @@ func (s *Session) NewRequest(method, url string, headers *http.Header, body io.R
 	if headers != nil {
 		req.Header = *headers
 	}
-	if s.AuthToken != nil {
-		req.Header.Add("X-Auth-Token", s.AuthToken.GetToken())
+	if s.AuthToken != "" {
+		req.Header.Add("X-Auth-Token", s.AuthToken)
 	}
 	return
 }
@@ -241,7 +241,7 @@ func Delete(
 	params *url.Values,
 	headers *http.Header,
 ) (resp *http.Response, err error) {
-	s, _ := NewSession(nil, nil, nil)
+	s, _ := NewSession(nil, "", nil)
 	return s.Delete(url, params, headers)
 }
 
@@ -251,7 +251,7 @@ func Get(
 	params *url.Values,
 	headers *http.Header,
 ) (resp *http.Response, err error) {
-	s, _ := NewSession(nil, nil, nil)
+	s, _ := NewSession(nil, "", nil)
 	return s.Get(url, params, headers)
 }
 
@@ -262,7 +262,7 @@ func GetJSON(
 	headers *http.Header,
 	responseContainer interface{},
 ) (resp *http.Response, err error) {
-	s, _ := NewSession(nil, nil, nil)
+	s, _ := NewSession(nil, "", nil)
 	return s.RequestJSON("GET", url, params, headers, nil, responseContainer)
 }
 
@@ -273,7 +273,7 @@ func Post(
 	headers *http.Header,
 	body *[]byte,
 ) (resp *http.Response, err error) {
-	s, _ := NewSession(nil, nil, nil)
+	s, _ := NewSession(nil, "", nil)
 	return s.Post(url, params, headers, body)
 }
 
@@ -284,9 +284,14 @@ func PostJSON(
 	headers *http.Header,
 	body interface{},
 	responseContainer interface{},
-) (resp *http.Response, err error) {
-	s, _ := NewSession(nil, nil, nil)
-	return s.RequestJSON("POST", url, params, headers, body, responseContainer)
+) (resp *http.Response, token string, err error) {
+	s, _ := NewSession(nil, "", nil)
+	resp, err = s.RequestJSON("POST", url, params, headers, body, responseContainer)
+        if resp == nil {
+		return nil, "", err
+	}
+        token = resp.Header.Get("X-Subject-Token")
+	return resp, token, err
 }
 
 // Put sends a PUT request.
@@ -296,6 +301,6 @@ func Put(
 	headers *http.Header,
 	body *[]byte,
 ) (resp *http.Response, err error) {
-	s, _ := NewSession(nil, nil, nil)
+	s, _ := NewSession(nil, "", nil)
 	return s.Put(url, params, headers, body)
 }

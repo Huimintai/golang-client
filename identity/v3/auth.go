@@ -13,19 +13,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package openstack
+package keystonev3
 
 import (
 	"errors"
 	"time"
+
+	"git.openstack.org/openstack/golang-client.git/openstack"
 )
 
 // AuthRef is the returned authentication object, maybe v2 or v3
 type AuthRef interface {
 	GetToken() string
 	GetExpiration() time.Time
-	GetEndpoint(string, string) (string, error)
-	GetProject() string
 }
 
 // AuthOpts is the set of credentials used to authenticate to OpenStack
@@ -63,20 +63,21 @@ func (s *AuthOpts) GetAuthType() (string, error) {
 
 // Basic auth call
 // These args should be an interface??
-func DoAuthRequest(authopts AuthOpts) (AuthRef, error) {
+func DoAuthRequest(authopts AuthOpts) (AuthRef, string, error) {
 	var auth = AuthToken{}
+        var token = ""
 
 	// Assume passwordv2 for now
-	auth_mod, err := NewUserPassV2(authopts)
+	auth_mod, err := NewUserPassV3(authopts)
 	if err != nil {
 		err = errors.New("Failed to get auth options")
-		return nil, err
+		return nil, "", err
 	}
 
-	_, err = PostJSON(auth_mod.AuthUrl + "/tokens", nil, nil, &auth_mod, &auth)
+	_, token, err = openstack.PostJSON(authopts.AuthUrl + "/auth/tokens", nil, nil, &auth_mod, &auth)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
-	return auth, nil
+	return auth, token, nil
 }
